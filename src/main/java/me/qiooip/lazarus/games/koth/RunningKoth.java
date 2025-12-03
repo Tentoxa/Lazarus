@@ -21,7 +21,8 @@ public class RunningKoth {
     @Getter private final KothData kothData;
     @Getter private final Capzone capzone;
 
-    private int initialCapTime;
+    @Getter private int initialCapTime;
+    private int pendingCapTime = -1; // Time change waiting to be applied when capzone is empty
 
     private final long startTime;
     private long capperChange;
@@ -35,12 +36,52 @@ public class RunningKoth {
         this.initialCapTime = time;
         this.startTime = this.capperChange = System.currentTimeMillis();
 
-        this.capzone.getCuboid().getPlayers().forEach(player -> this.onPlayerEnterCapzone(player));
+        this.capzone.getCuboid().getPlayers().forEach(this::onPlayerEnterCapzone);
     }
 
+    /**
+     * Changes the base cap time for this KOTH permanently. This affects what time
+     * the KOTH resets to when a player is knocked. If no players are in the capzone,
+     * the time is applied immediately. Otherwise, it will be applied once all players
+     * leave the capzone to avoid interrupting active cap progress.
+     * Use this for admin commands like /koth settime.
+     *
+     * @param newTime the new base cap time in seconds
+     */
     public void changeCapTime(int newTime) {
-        if(newTime < this.capzone.getTime()) this.capzone.setTime(newTime);
         this.initialCapTime = newTime;
+
+        if(this.capzone.hasNoPlayers()) {
+            // Apply immediately when no one is capping
+            this.capzone.setTime(newTime);
+            this.pendingCapTime = -1;
+        } else {
+            // Queue the time change to apply when capzone becomes empty
+            this.pendingCapTime = newTime;
+        }
+    }
+
+    /**
+     * Temporarily sets the current cap time without changing the base initialCapTime.
+     * When the player is knocked, the time will reset to initialCapTime, not this value.
+     * Use this for temporary boosts/reductions that should only affect the current cap attempt.
+     *
+     * @param newTime the temporary cap time in seconds for this cap attempt
+     */
+    public void setCurrentCapTime(int newTime) {
+        this.capzone.setTime(newTime);
+    }
+
+    /**
+     * Checks if there's a pending cap time change and applies it.
+     * Called when the capzone becomes empty (player knocked or left).
+     */
+    private void applyPendingCapTime() {
+        if(this.pendingCapTime > 0 && this.capzone.hasNoPlayers()) {
+            this.capzone.setTime(this.pendingCapTime);
+            this.initialCapTime = this.pendingCapTime;
+            this.pendingCapTime = -1;
+        }
     }
 
     private void handleWin() {
@@ -98,6 +139,8 @@ public class RunningKoth {
     }
 
     void onPlayerEnterCapzone(Player player) {
+        // Apply any pending cap time change before a new player starts capping
+        this.applyPendingCapTime();
         if(Lazarus.getInstance().getStaffModeManager().isInStaffModeOrVanished(player)) return;
 
         if(this.capzone.hasNoPlayers()) {
