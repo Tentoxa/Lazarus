@@ -90,6 +90,9 @@ public class SettingsHandler extends Handler implements Listener {
     }
 
     private void loadSettingsInventory(Player player) {
+        Userdata userdata = Lazarus.getInstance().getUserdataManager().getUserdata(player);
+        if(userdata == null) return;
+
         Inventory inventory = Bukkit.createInventory(player, Config.PLAYER_SETTINGS_INVENTORY_SIZE, Config.PLAYER_SETTINGS_INVENTORY_NAME);
 
         this.playerSettings.forEach(setting -> {

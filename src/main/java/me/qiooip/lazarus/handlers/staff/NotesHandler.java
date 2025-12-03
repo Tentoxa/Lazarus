@@ -77,7 +77,7 @@ public class NotesHandler extends Handler implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Userdata data = Lazarus.getInstance().getUserdataManager().getUserdata(event.getPlayer());
-        if(data.getNotes().isEmpty()) return;
+        if(data == null || data.getNotes().isEmpty()) return;
 
         Messages.sendMessage("", "lazarus.staff");
 
