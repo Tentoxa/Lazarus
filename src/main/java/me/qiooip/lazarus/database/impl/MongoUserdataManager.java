@@ -1,0 +1,139 @@
+package me.qiooip.lazarus.database.impl;
+
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.ReplaceOptions;
+import me.qiooip.lazarus.Lazarus;
+import me.qiooip.lazarus.userdata.Userdata;
+import me.qiooip.lazarus.userdata.UserdataManager;
+import me.qiooip.lazarus.utils.StringUtils;
+import org.bson.Document;
+import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.UUID;
+
+public class MongoUserdataManager extends UserdataManager {
+
+    private MongoCollection<Document> getUserdataRepo() {
+        return Lazarus.getInstance().getMongoManager().getUserdataRepo();
+    }
+
+    @Override
+    public void loadUserdata(UUID uuid, String name) {
+        if(super.userdata.containsKey(uuid)) return;
+
+        Document document = this.getUserdataRepo().find(Filters.eq("_id", uuid)).first();
+
+        if(document == null) {
+            super.userdata.put(uuid, new Userdata(uuid, name));
+            return;
+        }
+
+        Userdata userdata = this.userdataFromDocument(document);
+
+        super.userdata.put(uuid, userdata);
+        this.checkUsernameChange(userdata, name);
+    }
+
+    @Override
+    public void saveUserdata(UUID uuid, boolean remove) {
+        Userdata userdata = this.getUserdata(uuid);
+        if(userdata == null) return;
+
+        Document document = this.userdataToDocument(userdata);
+
+        try {
+            this.getUserdataRepo().replaceOne(Filters.eq("_id", uuid), document, new ReplaceOptions().upsert(true));
+        } catch(Exception e) {
+            Lazarus.getInstance().log("&c[ERROR] Failed to save userdata for " + uuid + ": " + e.getMessage());
+            e.printStackTrace();
+        }
+        if(remove) super.userdata.remove(uuid);
+    }
+
+    @Override
+    public void saveUserdata(Userdata userdata) {
+        if(userdata == null) return;
+
+        Document document = this.userdataToDocument(userdata);
+        try {
+            this.getUserdataRepo().replaceOne(Filters.eq("_id", userdata.getUuid()), document, new ReplaceOptions().upsert(true));
+        } catch(Exception e) {
+            Lazarus.getInstance().log("&c[ERROR] Failed to save userdata for " + userdata.getUuid() + ": " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public Userdata getUserdata(OfflinePlayer player) {
+        if(super.userdata.containsKey(player.getUniqueId())) return this.getUserdata(player.getUniqueId());
+
+        Document document = this.getUserdataRepo().find(Filters.eq("_id", player.getUniqueId())).first();
+        if(document == null) return null;
+
+        Userdata userdata = this.userdataFromDocument(document);
+        super.userdata.put(player.getUniqueId(), userdata);
+
+        return userdata;
+    }
+
+    @Override
+    public void deleteAllUserdata() {
+        int deleted = super.userdata.size();
+
+        this.getUserdataRepo().drop();
+        super.userdata.clear();
+
+        Bukkit.getOnlinePlayers().forEach(player -> {
+            UUID uuid = player.getUniqueId();
+            super.userdata.put(uuid, new Userdata(uuid, player.getName()));
+        });
+
+        Lazarus.getInstance().log("- &cDeleted &e" + deleted + " &cuserdata files.");
+    }
+
+    private Document userdataToDocument(Userdata data) {
+        return new Document("_id", data.getUuid())
+            .append("name", data.getName())
+            .append("kills", data.getKills())
+            .append("deaths", data.getDeaths())
+            .append("killstreak", data.getKillstreak())
+            .append("highestKillstreak", data.getHighestKillstreak())
+            .append("balance", data.getBalance())
+            .append("lives", data.getLives())
+            .append("spawnCredits", data.getSpawnCredits())
+            .append("reclaimUsed", data.isReclaimUsed())
+            .append("settings", StringUtils.settingsToString(data.getSettings()))
+            .append("ignoring", data.getIgnoring())
+            .append("notes", data.getNotes())
+            .append("lastKills", data.getLastKills())
+            .append("lastDeaths", data.getLastDeaths())
+            .append("kitDelays", data.getKitDelays());
+    }
+
+    private Userdata userdataFromDocument(Document document) {
+        Userdata data = new Userdata();
+
+        data.setUuid((UUID) document.get("_id"));
+        data.setName(document.getString("name"));
+        data.setKills(document.getInteger("kills"));
+        data.setDeaths(document.getInteger("deaths"));
+        data.setKillstreak(document.getInteger("killstreak"));
+        data.setHighestKillstreak(document.getInteger("highestKillstreak"));
+        data.setBalance(document.getInteger("balance"));
+        data.setLives(document.getInteger("lives"));
+        data.setSpawnCredits(document.getInteger("spawnCredits"));
+        data.setReclaimUsed(document.getBoolean("reclaimUsed"));
+        data.setSettings(StringUtils.settingsFromString(document.getString("settings")));
+        data.setIgnoring(document.get("ignoring", new ArrayList<>()));
+        data.setNotes(document.get("notes", new ArrayList<>()));
+        data.setLastKills(document.get("lastKills", new ArrayList<>()));
+        data.setLastDeaths(document.get("lastDeaths", new ArrayList<>()));
+        data.setKitDelays(document.get("kitDelays", new HashMap<>()));
+
+        return data;
+    }
+}

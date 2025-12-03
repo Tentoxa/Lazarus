@@ -1,0 +1,32 @@
+name: Lazarus
+version: 1.4.6
+main: me.qiooip.lazarus.Lazarus
+author: qIooIp
+
+loadbefore:
+- ShopGUIPlus
+
+softdepend:
+- AquaCore
+- AtomAPI
+- Chronium
+- CoreAPI
+- Core
+- GroupManager
+- HestiaCore
+- LuckPerms
+- mCore
+- MizuAPI
+- NCore
+- PermissionsEx
+- PowerfulPerms
+- Spark
+- UltraPermissions
+- Zoom
+- Zoot
+- zPermissions
+- Vault
+- ViaVersion
+- ProtocolSupport
+- MineIsland
+- LunarClientAPI

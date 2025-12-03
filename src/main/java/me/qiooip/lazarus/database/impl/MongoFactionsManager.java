@@ -1,0 +1,275 @@
+package me.qiooip.lazarus.database.impl;
+
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoCursor;
+import com.mongodb.client.model.BulkWriteOptions;
+import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.ReplaceOneModel;
+import com.mongodb.client.model.ReplaceOptions;
+import com.mongodb.client.model.WriteModel;
+import me.qiooip.lazarus.Lazarus;
+import me.qiooip.lazarus.factions.Faction;
+import me.qiooip.lazarus.factions.FactionPlayer;
+import me.qiooip.lazarus.factions.FactionsManager;
+import me.qiooip.lazarus.factions.enums.ChatType;
+import me.qiooip.lazarus.factions.enums.Role;
+import me.qiooip.lazarus.factions.event.FactionDisbandEvent;
+import me.qiooip.lazarus.factions.event.PlayerLeaveFactionEvent;
+import me.qiooip.lazarus.factions.event.PlayerLeaveFactionEvent.LeaveReason;
+import me.qiooip.lazarus.factions.type.PlayerFaction;
+import me.qiooip.lazarus.factions.type.SystemFaction;
+import me.qiooip.lazarus.utils.Color;
+import me.qiooip.lazarus.utils.GsonUtils;
+import me.qiooip.lazarus.utils.LocationUtils;
+import me.qiooip.lazarus.utils.Tasks;
+import org.bson.Document;
+import org.bukkit.event.EventHandler;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class MongoFactionsManager extends FactionsManager {
+
+    private MongoCollection<Document> getFactionsRepo() {
+        return Lazarus.getInstance().getMongoManager().getFactionsRepo();
+    }
+
+    private MongoCollection<Document> getPlayersRepo() {
+        return Lazarus.getInstance().getMongoManager().getPlayersRepo();
+    }
+
+    @Override
+    public void loadFactions() {
+        super.factions = new ConcurrentHashMap<>();
+
+        try(MongoCursor<Document> cursor = this.getFactionsRepo().find().iterator()) {
+            while(cursor.hasNext()) {
+                Faction faction = this.factionFromDocument(cursor.next());
+                if(faction == null) continue;
+                
+                super.factions.put(faction.getId(), faction);
+                super.factionNames.put(faction.getName(), faction.getId());
+
+                super.additionalFactionSetup(faction);
+            }
+        }
+
+        Lazarus.getInstance().log("- &7Loaded &a" + super.factions.size() + " &7factions.");
+    }
+
+    @Override
+    public void saveFactions(boolean log, boolean onDisable) {
+        if(super.factions == null || super.factions.isEmpty()) return;
+
+        if(onDisable) {
+            super.factions.values().forEach(this::stripFactionColor);
+        }
+
+        ReplaceOptions options = new ReplaceOptions().upsert(true);
+        List<WriteModel<Document>> toWrite = new ArrayList<>();
+
+        super.factions.values().forEach(faction -> {
+            Document data = this.factionToDocument(faction);
+            toWrite.add(new ReplaceOneModel<>(Filters.eq("_id", data.get("_id")), data, options));
+        });
+
+        try {
+            this.getFactionsRepo().bulkWrite(toWrite, new BulkWriteOptions().ordered(false));
+        } catch(Exception e) {
+            Lazarus.getInstance().log("&c[ERROR] Failed to save factions to MongoDB: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        if(log) {
+            Lazarus.getInstance().log("- &7Saved &a" + super.factions.size() + " &7factions.");
+        }
+    }
+
+    @Override
+    public void loadPlayers() {
+        super.players = new ConcurrentHashMap<>();
+
+        try(MongoCursor<Document> cursor = this.getPlayersRepo().find().iterator()) {
+            while(cursor.hasNext()) {
+                FactionPlayer fplayer = this.playerFromDocument(cursor.next());
+                PlayerFaction faction = fplayer.getFaction();
+
+                if(faction != null) {
+                    super.players.put(fplayer.getUuid(), fplayer);
+
+                    faction.addMember(fplayer);
+                    if(fplayer.isOnline()) faction.incrementOnlineMembers();
+                }
+            }
+        }
+
+        Lazarus.getInstance().log("- &7Loaded &a" + super.players.size() + " &7players.");
+    }
+
+    @Override
+    public void savePlayers(boolean log) {
+        if(super.players == null || super.players.isEmpty()) return;
+
+        ReplaceOptions options = new ReplaceOptions().upsert(true);
+        List<WriteModel<Document>> toWrite = new ArrayList<>();
+
+        super.players.values().forEach(fplayer -> {
+            Document data = this.playerToDocument(fplayer);
+            toWrite.add(new ReplaceOneModel<>(Filters.eq("_id", data.get("_id")), data, options));
+        });
+
+        try {
+            this.getPlayersRepo().bulkWrite(toWrite, new BulkWriteOptions().ordered(false));
+        } catch(Exception e) {
+            Lazarus.getInstance().log("&c[ERROR] Failed to save players to MongoDB: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        if(log) {
+            Lazarus.getInstance().log("- &7Saved &a" + this.players.size() + " &7players.");
+        }
+    }
+
+    @Override
+    public void deleteAllPlayerFactions() {
+        this.getPlayersRepo().drop();
+        this.players.clear();
+
+        int factionsSize = super.factions.size();
+        Iterator<Faction> iterator = super.factions.values().iterator();
+
+        while(iterator.hasNext()) {
+            Faction faction = iterator.next();
+            if(faction instanceof SystemFaction) continue;
+
+            super.factionNames.remove(faction.getName());
+            iterator.remove();
+        }
+
+        this.getFactionsRepo().drop();
+        this.saveFactions(false, false);
+
+        Lazarus.getInstance().log("- &cDeleted &e" + (factionsSize - super.factions.size()) + " &cplayer factions.");
+    }
+
+    private Document factionToDocument(Faction faction) {
+        if(faction instanceof PlayerFaction) {
+            PlayerFaction playerFaction = (PlayerFaction) faction;
+
+            return new Document("_id", faction.getId())
+                .append("name", faction.getName())
+                .append("deathban", faction.isDeathban())
+                .append("dtr", playerFaction.getDtr())
+                .append("announcement", playerFaction.getAnnouncement())
+                .append("balance", playerFaction.getBalance())
+                .append("lives", playerFaction.getLives())
+                .append("points", playerFaction.getPoints())
+                .append("kills", playerFaction.getKills())
+                .append("kothsCapped", playerFaction.getKothsCapped())
+                .append("home", LocationUtils.locationToString(playerFaction.getHome()))
+                .append("open", playerFaction.isOpen())
+                .append("autoRevive", playerFaction.isAutoRevive())
+                .append("friendlyFire", playerFaction.isFriendlyFire())
+                .append("allies", playerFaction.getAllies());
+        } else {
+            SystemFaction systemFaction = (SystemFaction) faction;
+
+            return new Document("_id", faction.getId())
+                .append("type", GsonUtils.getFactionType(faction.getClass()))
+                .append("name", faction.getName())
+                .append("deathban", faction.isDeathban())
+                .append("safezone", systemFaction.isSafezone())
+                .append("enderpearls", systemFaction.isEnderpearls())
+                .append("abilities", systemFaction.isAbilities())
+                .append("color", systemFaction.getColor().replace('§', '&'));
+        }
+    }
+
+    private Faction factionFromDocument(Document document) {
+        if(document.getString("type") == null) {
+            PlayerFaction faction = new PlayerFaction();
+
+            faction.setId((UUID) document.get("_id"));
+            faction.setName(document.getString("name"));
+            faction.setDeathban(document.getBoolean("deathban"));
+            faction.setDtrOnLoad(document.getDouble("dtr"));
+            faction.setAnnouncement(document.getString("announcement"));
+            faction.setBalance(document.getInteger("balance"));
+            faction.setLives(document.getInteger("lives"));
+            faction.setPoints(document.getInteger("points"));
+            faction.setKills(document.getInteger("kills"));
+            faction.setKothsCapped(document.getInteger("kothsCapped"));
+            faction.setHome(LocationUtils.stringToLocation(document.getString("home")));
+            faction.setOpen(document.getBoolean("open"));
+            faction.setAutoRevive(document.getBoolean("autoRevive"));
+            faction.setFriendlyFire(document.getBoolean("friendlyFire"));
+            faction.setAllies(document.get("allies", new ArrayList<>()));
+
+            return faction;
+        } else {
+            SystemFaction faction = null;
+
+            try {
+                faction = (SystemFaction) GsonUtils.getFactionClass(document.getString("type")).newInstance();
+
+                faction.setId((UUID) document.get("_id"));
+                faction.setName(document.getString("name"));
+                faction.setDeathban(document.getBoolean("deathban"));
+                faction.setSafezone(document.getBoolean("safezone"));
+                faction.setEnderpearls(document.getBoolean("enderpearls"));
+                faction.setAbilities(document.getBoolean("abilities"));
+                faction.setColor(Color.translate(document.getString("color")));
+
+            } catch(InstantiationException | IllegalAccessException e) {
+                e.printStackTrace();
+            }
+
+            return faction;
+        }
+    }
+
+    private Document playerToDocument(FactionPlayer fplayer) {
+        return new Document("_id", fplayer.getUuid())
+            .append("factionId", fplayer.getFactionId())
+            .append("role", fplayer.getRole().name())
+            .append("chatType", fplayer.getChatType().name());
+    }
+
+    private FactionPlayer playerFromDocument(Document document) {
+        FactionPlayer fplayer = new FactionPlayer();
+
+        fplayer.setUuid((UUID) document.get("_id"));
+        fplayer.setFactionId((UUID) document.get("factionId"));
+        fplayer.setRole(Role.valueOf(document.getString("role")));
+        fplayer.setChatType(ChatType.valueOf(document.getString("chatType")));
+
+        return fplayer;
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onFactionDisbandMongo(FactionDisbandEvent event) {
+        Faction faction = event.getFaction();
+
+        Tasks.async(() -> {
+            if(faction instanceof PlayerFaction) {
+                PlayerFaction playerFaction = (PlayerFaction) faction;
+
+                playerFaction.getMembers().keySet().forEach(uuid -> this
+                    .getPlayersRepo().deleteOne(Filters.eq("_id", uuid)));
+            }
+
+            this.getFactionsRepo().deleteOne(Filters.eq("_id", faction.getId()));
+        });
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onPlayerLeaveFactionMongo(PlayerLeaveFactionEvent event) {
+        if(event.getReason() == LeaveReason.DISBAND) return;
+
+        Tasks.async(() -> this.getPlayersRepo()
+            .deleteOne(Filters.eq("_id", event.getFactionPlayer().getUuid())));
+    }
+}
