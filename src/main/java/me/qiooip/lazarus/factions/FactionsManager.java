@@ -112,6 +112,14 @@ public class FactionsManager implements Listener {
     }
 
     public void disable() {
+        // Cancel the async save task first to prevent race conditions with Gson serialization
+        this.saveTask.cancel();
+        
+        // Small delay to ensure any running async task completes
+        try {
+            Thread.sleep(100);
+        } catch(InterruptedException ignored) {}
+        
         this.saveFactions(true, true);
         this.savePlayers(true);
 
@@ -121,8 +129,6 @@ public class FactionsManager implements Listener {
 
         this.chatSpy.clear();
         this.stuckInit.clear();
-
-        this.saveTask.cancel();
     }
 
     protected void loadFactions() {
