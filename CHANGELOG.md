@@ -5,21 +5,68 @@
 
 ---
 
-## [Fork] - Code Changes
+## [1.2.0] - 2025-12-04
 
-These are the only code modifications I made to the original source:
+### Added
+- **Lunar Client TeamView Event Handling** - TeamViewTask now listens to faction events for instant teammate marker updates
+  - Teammates are instantly updated when a player joins a faction
+  - Teammate markers are cleared immediately when a player leaves a faction
+  - All teammate markers are cleared when a faction disbands
+  - Added Lunar Client check to prevent sending packets to non-LC players
 
-### Staff Mode - Invisible Player Nametags
+- **Faction-Based Death Messages** - New configurable death message system with faction relationship awareness
+  - Players see personalized death messages based on their relationship to killer/victim
+  - Self (you), teammate, enemy, and factionless formats are fully customizable
+  - KoTH-specific anonymization option to hide player names during active KoTH events
+  - New `AdditionalConfig` class with dedicated `additional_config.yml`
+
+### Changed
+- **Gson Version** - Downgraded from `2.10.1` to `2.8.9` for better Java 8 compatibility
+- **Maven Shade Plugin** - Updated from `3.4.1` to `3.5.1`
+  - Changed `createDependencyReducedPom` to `true`
+  - Added `minimizeJar` set to `false`
+
+### Fixed
+- **TeamViewTask Null Safety** - Added null checks before sending Lunar Client packets
+
+---
+
+## [1.1.0] - 2025-12-03
+
+### Added
+- **KoTH Cap Time Management** - Enhanced cap time control with new methods
+  - `setCurrentCapTime(int)` - Temporarily modify cap time for current attempt only
+  - `getInitialCapTime()` - Retrieve the base cap time (now exposed via getter)
+  - Pending cap time system - Time changes are queued when players are capping and applied when capzone empties
+  - Improved `changeCapTime(int)` logic with proper handling of active caps
+
+### Fixed
+- **Faction Save Race Condition** - Prevented potential data corruption during plugin disable
+  - Async save task is now cancelled before saving factions
+  - Added 100ms delay to ensure running async tasks complete
+  - Task cancellation moved to beginning of `disable()` method
+
+- **Null Userdata Crashes** - Added null safety checks
+  - `SettingsHandler.loadSettingsInventory()` - Returns early if userdata is null
+  - `NotesHandler.onPlayerJoin()` - Added null check before accessing notes
+
+---
+
+## [1.0.0] - Initial Fork
+
+### Code Changes
+
+#### Staff Mode - Invisible Player Nametags
 - Invisible players now have their nametags visible when a staff member is in staff mode
 - Helps staff identify vanished/invisible players more easily
 
-### KoTH - Cap Time in Milliseconds
+#### KoTH - Cap Time in Milliseconds
 - Added functionality to retrieve the remaining cap time in milliseconds
 - Provides more precise timing data for integrations and displays
 
 ---
 
-## [Fork] - Build Configuration Updates
+## Build Configuration Updates
 
 ### Repositories Added/Updated
 
@@ -29,7 +76,7 @@ These are the only code modifications I made to the original source:
 - **Maven Central** (`https://repo.maven.apache.org/maven2`)
 - **CodeMC** (`https://repo.codemc.io/repository/maven-public/`)
 - **Lunar Client Repository** (`https://repo.lunarclient.dev`)
-- **Imanity Repository** (`https://repo.imanity.dev/imanity-libraries/`) - *NEW*
+- **Imanity Repository** (`https://repo.imanity.dev/imanity-libraries/`)
 
 ### Dependencies Added
 
@@ -40,7 +87,7 @@ These are the only code modifications I made to the original source:
 
 | Dependency | Old Version | New Version | Notes |
 |------------|-------------|-------------|-------|
-| Gson | (unknown) | `2.10.1` | Updated to latest stable |
+| Gson | (unknown) | `2.8.9` | Java 8 compatible version |
 | MongoDB Driver | (unknown) | `3.12.14` (sync) | Java 8 compatible version |
 | Lombok | (unknown) | `1.18.30` | Updated to latest |
 | LuckPerms API | (unknown) | `5.4` | Updated to latest |
@@ -48,7 +95,7 @@ These are the only code modifications I made to the original source:
 
 ### Build Configuration
 
-- **Maven Shade Plugin** `3.4.1` configured with:
+- **Maven Shade Plugin** `3.5.1` configured with:
   - Gson shading to `me.qiooip.lazarus.shade.gson`
   - MongoDB shading to `me.qiooip.lazarus.shade.mongodb`
   - BSON shading to `me.qiooip.lazarus.shade.bson`
