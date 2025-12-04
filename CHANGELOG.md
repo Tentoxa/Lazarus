@@ -5,6 +5,13 @@
 
 ---
 
+## [1.2.1] - 2025-12-04
+
+### Fixed
+- **Gson Shading Issue** - Fixed `ClassNotFoundException: JsonTreeWriter$1`
+  - Upgraded `maven-shade-plugin` to `3.6.0` to fix inner class relocation issues
+  - Reverted Gson to `2.10.1` as it is more compatible with shading and still supports Java 8
+
 ## [1.2.0] - 2025-12-04
 
 ### Added

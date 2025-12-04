@@ -15,8 +15,11 @@ public class AdditionalConfig {
     public static String FACTIONLESS_PLAYER_FORMAT;
     public static String FACTIONLESS_KILLER_FORMAT;
 
-    // KoTH Overwrites
+    // KoTH Overwrites (Faction Name Formats)
     public static boolean KOTH_ANONYMIZE_PLAYER_NAMES;
+
+    // KoTH Settings
+    public static boolean KOTH_PLAY_SOUND_ON_CAP;
 
     public AdditionalConfig() {
         ConfigFile config = Lazarus.getInstance().getAdditionalConfigFile();
@@ -32,7 +35,10 @@ public class AdditionalConfig {
         FACTIONLESS_PLAYER_FORMAT = config.getString("FACTION_NAME_FORMATS.FACTIONLESS_PLAYER_FORMAT");
         FACTIONLESS_KILLER_FORMAT = config.getString("FACTION_NAME_FORMATS.FACTIONLESS_KILLER_FORMAT");
 
-        // KoTH Overwrites
+        // KoTH Overwrites (Faction Name Formats)
         KOTH_ANONYMIZE_PLAYER_NAMES = config.getBoolean("FACTION_NAME_FORMATS.KOTH_OVERWRITES.ANONYMIZE_PLAYER_NAMES");
+
+        // KoTH Settings
+        KOTH_PLAY_SOUND_ON_CAP = config.getBoolean("KOTH.PLAY_SOUND_ON_CAP");
     }
 }

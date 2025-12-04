@@ -73,4 +73,14 @@ FACTION_NAME_FORMATS:
     # NOTE: Only applies when KoTH is actively running
     ANONYMIZE_PLAYER_NAMES: true
 
+#=========================================================#
+#                    KoTH Settings                        #
+#=========================================================#
+
+KOTH:
+  # Play a "bling" sound when a player starts capping a KoTH?
+  # If true: Player hears a piano note when they start capping
+  # If false: No sound is played
+  PLAY_SOUND_ON_CAP: true
+
 

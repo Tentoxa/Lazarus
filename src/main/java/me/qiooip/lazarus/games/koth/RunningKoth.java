@@ -2,6 +2,7 @@ package me.qiooip.lazarus.games.koth;
 
 import lombok.Getter;
 import me.qiooip.lazarus.Lazarus;
+import me.qiooip.lazarus.config.AdditionalConfig;
 import me.qiooip.lazarus.config.Config;
 import me.qiooip.lazarus.config.Language;
 import me.qiooip.lazarus.factions.FactionsManager;
@@ -14,6 +15,7 @@ import me.qiooip.lazarus.games.koth.event.KothStartedCappingEvent;
 import me.qiooip.lazarus.utils.Messages;
 import me.qiooip.lazarus.utils.StringUtils;
 import me.qiooip.lazarus.utils.Tasks;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 
 public class RunningKoth {
@@ -111,6 +113,10 @@ public class RunningKoth {
 
         player.sendMessage(Language.KOTH_PREFIX + Placeholder.RunningKothReplacer
             .parse(this, Language.KOTH_YOU_STARTED_CAPPING));
+
+        if(AdditionalConfig.KOTH_PLAY_SOUND_ON_CAP) {
+            player.playSound(player.getLocation(), Sound.ORB_PICKUP, 1.0f, 1.2f);
+        }
 
         if((this.antiSpamDelay - System.currentTimeMillis()) <= 0) {
             Messages.sendMessageWithoutPlayer(player, Language.KOTH_PREFIX + Placeholder.RunningKothReplacer
