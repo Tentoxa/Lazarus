@@ -2,6 +2,7 @@ package me.qiooip.lazarus.commands;
 
 import me.qiooip.lazarus.Lazarus;
 import me.qiooip.lazarus.commands.manager.BaseCommand;
+import me.qiooip.lazarus.config.AdditionalConfig;
 import me.qiooip.lazarus.config.Config;
 import me.qiooip.lazarus.config.ConfigFile;
 import me.qiooip.lazarus.config.Language;
@@ -46,9 +47,11 @@ public class LazarusCommand extends BaseCommand {
         Lazarus.getInstance().setClassesFile(new ConfigFile("classes.yml"));
         Lazarus.getInstance().setLimitersFile(new ConfigFile("limiters.yml"));
         Lazarus.getInstance().setItemsFile(new ConfigFile("items.yml"));
+        Lazarus.getInstance().setAdditionalConfigFile(new ConfigFile("additional_config.yml"));
 
         new Config();
         new Language();
+        new AdditionalConfig();
 
         sender.sendMessage(Language.PREFIX + Language.PLUGIN_RELOAD_MESSAGE.replace("<time>",
         String.valueOf(System.currentTimeMillis() - startTime)));

@@ -11,6 +11,7 @@ import me.qiooip.lazarus.commands.manager.SubCommandExecutor;
 import me.qiooip.lazarus.config.Config;
 import me.qiooip.lazarus.config.ConfigFile;
 import me.qiooip.lazarus.config.Language;
+import me.qiooip.lazarus.config.AdditionalConfig;
 import me.qiooip.lazarus.database.MongoManager;
 import me.qiooip.lazarus.database.impl.MongoClaimManager;
 import me.qiooip.lazarus.database.impl.MongoFactionsManager;
@@ -121,6 +122,7 @@ public class Lazarus extends JavaPlugin {
     @Setter private ConfigFile abilitiesFile;
     @Setter private ConfigFile itemsFile;
     private ConfigFile utilitiesFile;
+    @Setter private ConfigFile additionalConfigFile;
 
     @Setter private MongoManager mongoManager;
     @Setter private UserdataManager userdataManager;
@@ -215,6 +217,7 @@ public class Lazarus extends JavaPlugin {
             this.abilitiesFile = new ConfigFile("abilities.yml");
             this.itemsFile = new ConfigFile("items.yml");
             this.utilitiesFile = new ConfigFile("utilities.yml");
+            this.additionalConfigFile = new ConfigFile("additional_config.yml");
         } catch(RuntimeException e) {
             Bukkit.getPluginManager().disablePlugin(this);
             return;
@@ -329,6 +332,7 @@ public class Lazarus extends JavaPlugin {
 
         new Config();
         new Language();
+        new AdditionalConfig();
 
         if(Config.TAB_ENABLED && Bukkit.getMaxPlayers() < 60) {
             this.log("&4===&c=============================================&4===");

@@ -1,0 +1,76 @@
+#=========================================================#
+#             Additional Configuration                    #
+#             Custom Modifications Config                 #
+#=========================================================#
+#                                                         #
+# This config file contains additional settings for       #
+# custom modifications to the Lazarus core plugin.        #
+#                                                         #
+#=========================================================#
+
+#=========================================================#
+#              Faction-Based Name Formats                 #
+#=========================================================#
+# Customize how player names appear in death messages     #
+# based on your relationship to the killer/victim.        #
+#                                                         #
+# FORMATTING RULES:                                       #
+#   - Victims (who died) = RED color                      #
+#   - Killers (who killed) = GREEN color                  #
+#   - Underlined = You or your faction mate               #
+#                                                         #
+# Available placeholders:                                 #
+#   <player> / <killer> - The player's name               #
+#   <kills> - The player's kill count                     #
+#   <faction> - The player's faction name (or "None")     #
+#                                                         #
+# Color codes: &a=green, &c=red, &n=underline, &r=reset   #
+#=========================================================#
+
+FACTION_NAME_FORMATS:
+  # Master toggle for faction-based name formatting
+  # If false, original formats from language.yml are used
+  ENABLED: false
+
+  #---------------------------------------------------------
+  # SELF FORMATS - When YOU are the killer or victim
+  #---------------------------------------------------------
+  # Example: You kill someone -> You see: "&a&nYourName&r killed &cEnemy&r"
+  # Example: You get killed   -> You see: "&aKiller&r killed &c&nYourName&r"
+  SELF_PLAYER_FORMAT: "&c&n<player>&r"
+  SELF_KILLER_FORMAT: "&a&n<killer>&r"
+
+  #---------------------------------------------------------
+  # TEAMMATE FORMATS - When your FACTION MATE kills or dies
+  #---------------------------------------------------------
+  # Example: Faction mate kills enemy -> "&a&nTeammate&r killed &cEnemy&r"
+  # Example: Faction mate gets killed -> "&aKiller&r killed &c&nTeammate&r"
+  TEAMMATE_PLAYER_FORMAT: "&c&n<player>&r"
+  TEAMMATE_KILLER_FORMAT: "&a&n<killer>&r"
+
+  #---------------------------------------------------------
+  # ENEMY FORMATS - When players from OTHER factions fight
+  #---------------------------------------------------------
+  # Example: Enemy kills another enemy -> "&aKiller&r killed &cVictim&r"
+  # (No underline since neither is your teammate)
+  ENEMY_PLAYER_FORMAT: "&c<player>&r"
+  ENEMY_KILLER_FORMAT: "&a<killer>&r"
+
+  #---------------------------------------------------------
+  # FACTIONLESS FORMATS - When players with NO faction fight
+  #---------------------------------------------------------
+  # Example: Factionless player kills/dies -> same as enemy
+  FACTIONLESS_PLAYER_FORMAT: "&c<player>&r"
+  FACTIONLESS_KILLER_FORMAT: "&a<killer>&r"
+
+  #---------------------------------------------------------
+  # KOTH SPECIFIC SETTINGS
+  #---------------------------------------------------------
+  KOTH_OVERWRITES:
+    # Anonymize player names during active KoTH events?
+    # If true: "&aAnonymous&r killed &cAnonymous&r"
+    # If false: Normal names are shown
+    # NOTE: Only applies when KoTH is actively running
+    ANONYMIZE_PLAYER_NAMES: true
+
+
